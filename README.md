@@ -1,4 +1,4 @@
-This repository contains data and experiments associated to the paper: Toscano-Duran,V., Gonzalez-Diaz,R., and Gutiérrez-Naranjo, M.A., "Persistent Entropy Transform: A Topological Entropy-Based Signature for Shape Analysis and Signal Characterization".
+This repository contains data and experiments associated to the paper: Toscano-Duran,V., Gonzalez-Diaz,R., and Gutiérrez-Naranjo, M.A., "Persistent Entropy Transform: An Entropy-Based Descriptor for Topological Data Analysis".
 
 ## Usage
 
@@ -31,6 +31,10 @@ pip install ipykernel
 - `utils.py`: It contains some necessary functions used in the experiments.
 
 - `pet.ipynb`: The notebook of the experiments.
+
+- `DiscriminativeMithb.ipynb`: The notebook of the classification experiments based on the MIT-BIH dataset.
+
+- `DiscriminativeTwoLead.ipynb`: The notebook of the classification experiments based on the TwoLeadECG dataset.
 
 - `data`: It contains data used in experiments
 
