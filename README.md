@@ -1,4 +1,4 @@
-This repository contains data and experiments associated to the paper: Toscano-Duran,V., Gonzalez-Diaz,R., and Gutiérrez-Naranjo, M.A., "Persistent Entropy Transform: A Topological Entropy-Based Signature for Shape Analysis and Signal Characterization".
+This repository contains data and experiments associated to the paper: Toscano-Duran,V., Gonzalez-Diaz,R., and Gutiérrez-Naranjo, M.A., "Persistent Entropy Transform: An entropy-based descriptor for topological data analysis".
 
 ## Usage
 
