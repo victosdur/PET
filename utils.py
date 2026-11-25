@@ -142,3 +142,142 @@ def persistent_entropy_transform(
     pet_values = tf.stack(pet_values)
 
     return pet_values, angles
+from time import perf_counter
+import pandas as pd
+from scipy.special import ndtr
+from sklearn.base import clone
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score, roc_auc_score
+from xgboost import XGBClassifier
+from tqdm.auto import tqdm
+
+
+def ecg_curve(signal, n_points):
+    y = np.asarray(signal, dtype=float).reshape(-1)
+    if not np.isfinite(y).all():
+        raise ValueError('Non-finite signal')
+    x = np.arange(len(y), dtype=float)
+    x = x / (np.ptp(x) + 1e-8)
+    y = (y - y.min()) / (np.ptp(y) + 1e-8)
+    idx = np.linspace(0, len(y)-1, n_points).astype(int)
+    return tf.constant(x[idx], dtype=tf.float32), tf.constant(y[idx], dtype=tf.float32)
+
+
+def ecg_diagram(x, y, direction, layer):
+    h = directional_height_function(x, y, direction)
+    d = np.asarray(layer.call(h)[0][0].numpy(), dtype=np.float64).reshape(-1, 2)
+    return d[np.isfinite(d).all(axis=1) & (d[:, 1] > d[:, 0])]
+
+
+def ecg_summary(d, kind, direction, n_bins=100, k_max=5, image_bins=20):
+    sizes = {'PE': 1, 'BC': n_bins, 'PL': n_bins*k_max, 'PI': image_bins**2}
+    if not len(d):
+        return np.zeros(sizes[kind], dtype=np.float32)
+    b, e = d.T
+    lengths = e-b
+    if kind == 'PE':
+        p = lengths / lengths.sum()
+        return np.array([-np.dot(p, np.log(p))], dtype=np.float32)
+    if kind in ('BC', 'PL'):
+        grid = np.linspace(b.min(), e.max(), n_bins)
+        if kind == 'BC':
+            return ((b[:, None] <= grid) & (grid < e[:, None])).sum(axis=0).astype(np.float32)
+        tents = np.maximum(0, np.minimum(grid[:, None]-b, e-grid[:, None]))
+        top = np.sort(tents, axis=1)[:, ::-1][:, :k_max]
+        return np.pad(top, ((0, 0), (0, k_max-top.shape[1]))).ravel().astype(np.float32)
+    v = np.asarray(direction, dtype=float)
+    lo = np.minimum(v, 0).sum()
+    hi = np.maximum(v, 0).sum()
+    birth_edges = np.linspace(lo, hi, image_bins+1)
+    pers_edges = np.linspace(0, hi-lo, image_bins+1)
+    birth_mass = np.diff(ndtr(birth_edges[None, :] - b[:, None]), axis=1)
+    pers_mass = np.diff(ndtr(pers_edges[None, :] - lengths[:, None]), axis=1)
+    return (birth_mass.T @ (lengths[:, None]*pers_mass)).ravel().astype(np.float32)
+
+
+def ecg_features(X, layer, n_points, representation, num_directions=64):
+    X = np.asarray(X)
+    if representation == 'Raw':
+        start = perf_counter()
+        features = X.reshape(len(X), -1)
+        return features, perf_counter()-start
+    kinds = {'PE':'PE', 'BC':'BC', 'PL':'PL', 'PI':'PI', 'PET':'PE', 'BCT':'BC', 'PLT':'PL', 'PIT':'PI'}
+    directional = representation in ('PET', 'BCT', 'PLT', 'PIT')
+    directions = generate_directions_2D(num_directions)[0] if directional else tf.constant([[0., 1.]], dtype=tf.float32)
+    kind = kinds[representation]
+    dim = {'PE':1, 'BC':100, 'PL':500, 'PI':400}[kind]*len(directions)
+    features = np.empty((len(X), dim), dtype=np.float32)
+    elapsed = 0.0
+    for i, signal in enumerate(tqdm(X, desc=representation)):
+        start = perf_counter()
+        x, y = ecg_curve(signal, n_points)
+        features[i] = np.concatenate([ecg_summary(ecg_diagram(x, y, v, layer), kind, v.numpy()) for v in directions])
+        elapsed += perf_counter()-start
+    return features, elapsed
+
+
+def ecg_models(random_state=42):
+    return {
+        'SVM': SVC(kernel='linear', C=1, probability=True, random_state=random_state),
+        'Random Forest': RandomForestClassifier(n_estimators=300, random_state=random_state),
+        'XGBoost': XGBClassifier(n_estimators=300, max_depth=4, learning_rate=0.05, subsample=0.8, colsample_bytree=0.8, eval_metric='logloss', random_state=random_state)
+    }
+
+
+def ecg_comparison(X, y, layer, n_points, X_test=None, y_test=None, n_splits=5, n_repeats=10, random_state=42, num_directions=64, output_prefix='ecg'):
+    X = np.asarray(X)
+    y = np.asarray(y).reshape(-1)
+    classes = np.unique(y)
+    if len(classes) != 2:
+        raise ValueError('Expected two classes')
+    if X_test is not None:
+        X_test = np.asarray(X_test)
+        y_test = np.asarray(y_test).reshape(-1)
+        if not np.isin(y_test, classes).all():
+            raise ValueError('Unknown test label')
+        n_train = len(X)
+        X = np.concatenate([X, X_test], axis=0)
+        y = np.concatenate([y, y_test])
+        splits = [(np.arange(n_train), np.arange(n_train, len(X)))]
+    else:
+        splits = list(RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state).split(X, y))
+    y = (y == classes[1]).astype(int)
+    models = ecg_models(random_state)
+    x0, y0 = ecg_curve(X[0], n_points)
+    v0 = tf.constant([0., 1.], dtype=tf.float32)
+    d0 = ecg_diagram(x0, y0, v0, layer)
+    for kind in ('PE', 'BC', 'PL', 'PI'):
+        ecg_summary(d0, kind, v0.numpy())
+    results, timing, fold_results = [], [], []
+    for representation in ('Raw', 'PE', 'BC', 'PL', 'PI', 'PET', 'BCT', 'PLT', 'PIT'):
+        F, seconds = ecg_features(X, layer, n_points, representation, num_directions)
+        timing.append({'Representation': representation, 'Dimension': F.shape[1], 'Extraction seconds': seconds, 'Extraction ms/sample': 1000*seconds/len(X), 'Feature matrix MiB': F.nbytes/2**20, 'Samples': len(X)})
+        pd.DataFrame(timing).to_csv(f'{output_prefix}_timing.csv', index=False)
+        for name, model in models.items():
+            rows = []
+            for fold, (tr, ts) in enumerate(tqdm(splits, desc=f'{representation} + {name}')):
+                clf = clone(model)
+                Ftr, Fts = F[tr], F[ts]
+                start = perf_counter()
+                clf.fit(Ftr, y[tr])
+                fit_seconds = perf_counter()-start
+                start = perf_counter()
+                pred = clf.predict(Fts)
+                prob = clf.predict_proba(Fts)[:, 1]
+                predict_seconds = perf_counter()-start
+                row = {'Accuracy': accuracy_score(y[ts], pred), 'Balanced Accuracy': balanced_accuracy_score(y[ts], pred), 'F1': f1_score(y[ts], pred), 'AUC': roc_auc_score(y[ts], prob), 'Fit seconds': fit_seconds, 'Predict seconds': predict_seconds}
+                rows.append(row)
+                fold_results.append({'Representation':representation, 'Model':name, 'Fold':fold, **row})
+            metrics = pd.DataFrame(rows)
+            result = {'Representation':representation, 'Dimension':F.shape[1], 'Model':name}
+            for metric in metrics:
+                result[metric+' Mean'] = metrics[metric].mean()
+                result[metric+' Std'] = metrics[metric].std(ddof=0)
+            results.append(result)
+            pd.DataFrame(results).to_csv(f'{output_prefix}_results.csv', index=False)
+            pd.DataFrame(fold_results).to_csv(f'{output_prefix}_folds.csv', index=False)
+            print(result)
+        del F
+    return pd.DataFrame(results), pd.DataFrame(timing), pd.DataFrame(fold_results)
