@@ -1,0 +1,10 @@
+PR lo ha tocado Rocio, y arxiv MA cierto? Confirmo, unificar solo en un archivo el articulo
+
+Habría tambien que definir la, BCT, PIT y la PLT, y compararla experimentalmente, y a raiz de eso darle valor a la PET. La PIT y la PLT.
+
+cOMENTAR EN LA 3.4 por que la ECT y la PHT, no tiene sentido en la experimentacion y por ejemplo que se toma la PIT y la PLT como resumen de la PHT, y la BC es un resuemn de la ECT, por eso de manera natural tiene sentido comparar con los resumen de dichas transformadas, esto hay que explicarlo.
+
+Tmabien añadir el tiempò que tarda todo en computarse puede ser interesante más haya de la dimensional.
+
+
+Rocio intenta mejroar la parte de estabilidad-continuidad, as´como la parte de la compkejidad d los metiodos.

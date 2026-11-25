@@ -1,0 +1,15 @@
+comentarios PET MA
+
+- dARLE MAS FUERZA EN EL ABSTRACT A LOS EXPERIMENTOS DE SEÑALES BIOMEDICOS, QUE ES LO IMPORTANTE.
+- cambiar el enfoque de como vendemos los experimentos, que validan? realmente ilustran que funciona bien.
+- no tantas formulas en la introduccion, ejemplo en el 3 parrafo de la introduccion
+- no hay inconsistencia diciendo nuestras contribuciones en la introduccion y luego de vuelta contribucion al final de la introudccion
+- el caption de la primera figura, se queda flojo la ultima frase dw que el ciruclo produce un perfil pet diferente.
+- no poner por ejemplo lower star, por que solo usamos esa filtracion
+- PONER CITA EN LA DEFINICION 1( PERSISTENT ENTROPY), LA NUESTRA DE CHINKATUNKA
+- poner introduccion primero en la seccion 3 de que vamos a entrar en la novedad de neustro estudio, es decir la PET, y tambien podriamos poner algun ejemplito nada mas terminar la seccion 3.1 para que el lector lo entienda visualmente
+- poner mas compacto la parte de 3.2
+- quizas la parte de discrretizacion de 3.3, hacer un enfoque mas matematico con algun fundmento matematuico, y quizas lo de d > 4 ponerlo en trabjo futuro.
+- en la parte de experimentacion no introducir conceptos matematicos, quizas antes.
+- la subsecciin 4.5 debe ser el peso fundamental del articulo, y mejorar el enfoque.
+

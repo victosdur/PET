@@ -17,7 +17,7 @@ env\Scripts\activate
 Finally, install the required libraries:
 
 ```bash
-pip install numpy pandas matplotlib tqdm gudhi tensorflow
+pip install numpy pandas matplotlib tqdm gudhi tensorflow scipy scikit-learn xgboost wfdb
 ```
 
 If Jupyter Notebook cannot find a kernel, you may need to install ipykernel. Run the following command to resolve this issue:
